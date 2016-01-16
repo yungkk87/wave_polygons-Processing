@@ -1,101 +1,109 @@
-import controlP5.*;
+// If you press button 'd' you can draw shape.
+// Click your mouse to make new point of polygons.
+// If you finish to draw, press button 'd' one more.
 
-int n;
-int temp=100;
-int r=30;
-PVector dot=new PVector(r*tan(PI/n),r);
-PVector dots[]=new PVector[1000];
-Line lines[]=new Line[1000];
-float angle=PI/2*3;
+int n=0;
+float temp;
+PVector dot;
+PVector center = new PVector(75,75);
+Line mainLine;
+float angle=0;
 float w=0.01;
 ArrayList<PVector> dotsCycle = new ArrayList<PVector>();
+ArrayList<PVector> dots = new ArrayList<PVector>();
+ArrayList<Line> lines = new ArrayList<Line>();
 float step=0;
-boolean line;
 PVector tempDot=new PVector();
-
-ControlP5 cp5;
+PVector tempDot2=new PVector();
+boolean clear=false;
+boolean draw=false;
 
 void setup(){
   size(500,150);
-  
-  cp5 = new ControlP5(this);
-  
-  //cp5.begin(cp5.addBackground("abc"));
-  
-  cp5.addSlider("n")
-     .setPosition(10, 120)
-     .setSize(200, 20)
-     .setRange(3, 50)
-     .setValue(3)
-     ;
-  
-  //cp5.end();
   rectMode(CENTER);
 }
 
 void draw(){
   
-  background(125);
+  background(255);
+  line(150,0,150,150);
   
-  if(temp!=n || step>=100*PI){
-    background(125);
-    dotsCycle.clear();
-  dots[0]=new PVector(r*tan(PI/n),r);
-  for(int i=1; i<n; i++){
-    dot.x=cos(2*PI/n)*dots[i-1].x-sin(2*PI/n)*dots[i-1].y;
-    dot.y=sin(2*PI/n)*dots[i-1].x+cos(2*PI/n)*dots[i-1].y;
-    dots[i]=dot.copy();
-    lines[i-1]=new Line(dots[i-1].x,dots[i].x,dots[i-1].y,dots[i].y);
-  }
-    lines[n-1]=new Line(dots[0].x,dots[n-1].x,dots[0].y,dots[n-1].y);
-    temp=n;  
+  if(step>=100*PI || clear){
+    background(255);
     step=0;
-    angle=PI/2*3;
+    angle=0;
+    dotsCycle.clear();
+    clear=false;
   }
   
-  pushMatrix();
-  //background(125);
-  translate(2*r,2*r+20);
-  beginShape();
-  for(int i=0; i<n; i++){
-    vertex(dots[i].x,dots[i].y);
+  if(draw){
+    for(int i=0; i<dots.size(); i++){
+      ellipse(dots.get(i).x,dots.get(i).y,5,5);
+    }
   }
-  vertex(dots[0].x,dots[0].y);
-  endShape();
+  
+  if(dots.size()>0 && !draw){
+    beginShape();
+    for(int i=0; i<dots.size(); i++){
+      vertex(dots.get(i).x,dots.get(i).y);
+    }
+    vertex(dots.get(0).x,dots.get(0).y);
+    endShape();
+    
+    if(lines.size()==0){
+      for(int i=0; i<dots.size()-1; i++){
+        lines.add(new Line(dots.get(i),dots.get(i+1)));
+      }
+      lines.add(new Line(dots.get(dots.size()-1),dots.get(0)));
+    }
+    
+    mainLine=new Line(center, new PVector(200*cos(angle)+75,200*sin(angle)+75));
+    tempDot=new PVector(1000,1000);
+    for(int i=0; i<lines.size(); i++){
+      if(intersection(mainLine,lines.get(i))){
+        temp=(mainLine.b-lines.get(i).b)/(lines.get(i).a-mainLine.a);
+        tempDot2=new PVector(temp,temp*mainLine.a+mainLine.b);
+        if(center.dist(tempDot)>center.dist(tempDot2))
+          tempDot=tempDot2.copy();
+      }
+    }
+    mainLine=new Line(center,tempDot);
+    mainLine.display();
+    rect(tempDot.x,tempDot.y,5,5);
+    
+    line(tempDot.x,tempDot.y,150+step,tempDot.y);
+    rect(150+step,tempDot.y,5,5);
+    dotsCycle.add(new PVector(150+step,tempDot.y));
+  
+    for(int i=0; i<dotsCycle.size()-1; i++){
+      line(dotsCycle.get(i).x,dotsCycle.get(i).y,dotsCycle.get(i+1).x,dotsCycle.get(i+1).y);
+    }
+    
+    step+=0.5;
+    angle-=w;
+  }
   
   if(angle<=0)
     angle+=2*PI;
-  for(int i=1; i<n; i++){
-    if(PI/n*(2*i-1)<=angle && PI/n*(2*i-1)+2*PI/n>angle){
-      tempDot.x=lines[i].b/(tan(angle-PI/2)-lines[i].a);
-      tempDot.y=lines[i].a*lines[i].b/(tan(angle-PI/2)-lines[i].a)+lines[i].b;
-      break;
-    }
-  }
-  if(angle>=2*PI-PI/n || angle<PI/n){
-    tempDot.x=lines[0].b/(tan(angle-PI/2)-lines[0].a);
-    tempDot.y=lines[0].a*lines[0].b/(tan(angle-PI/2)-lines[0].a)+lines[0].b;
-  }
-  else if(n%4==0 && abs(angle-PI/2*3)<=PI/n){
-    tempDot.x=r;
-    tempDot.y=r*tan(angle-PI/2*3);
-  }
-  else if(n%4==0 && abs(angle-PI/2)<=PI/n){
-    tempDot.x=-r;
-    tempDot.y=-r*tan(angle-PI/2);
-  }
+  ellipse(75,75,5,5);
+}
 
-  dotsCycle.add(new PVector(tempDot.x,tempDot.y));
-  
-  for(int i=0; i<dotsCycle.size(); i++){
-    ellipse(r+i*0.5,dotsCycle.get(i).y,1,1);
+void keyPressed(){
+  if(key==' '){
+      clear=true;
+      println("space");
+      dots.clear();
+      lines.clear();
+   }
+   else if(key=='d'){
+     draw=!draw;
+     println("d");
+   }
+}
+
+void mousePressed(){
+  if(draw){
+    dot=new PVector(mouseX,mouseY);
+    dots.add(dot);
   }
-  line(0,0,tempDot.x,tempDot.y);
-  line(tempDot.x,tempDot.y,r+step,tempDot.y);
-  rect(tempDot.x,tempDot.y,5,5);
-  rect(r+step,tempDot.y,5,5);
-  
-  step+=0.5;
-  angle-=w;
-  popMatrix();
 }
